@@ -15,7 +15,7 @@ import numpy as np
 import scipy as sp
 
 # Import scipy functions used by curve_fit
-from scipy.optimize.minpack import _initialize_feasible, _wrap_func, _wrap_jac, prepare_bounds
+from scipy.optimize._minpack_py import _initialize_feasible, _wrap_func, _wrap_jac, prepare_bounds
 from scipy.optimize import least_squares, OptimizeWarning
 from scipy.linalg import cholesky, LinAlgError, svd
 

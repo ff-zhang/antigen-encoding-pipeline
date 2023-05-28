@@ -4,7 +4,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-import pickle,sys,os
+import pickle, sys, os
 import numpy as np
 import pandas as pd
 from sys import platform as sys_pf
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import tkinter as tk
 
-#from scipy.optimize import curve_fit  # Use our custom curve_fit instead
+# from scipy.optimize import curve_fit  # Use our custom curve_fit instead
 from scripts.postprocess.fitting_functions import curve_fit_jac
 from scipy.special import hyp2f1
 from scipy.stats import linregress
@@ -25,7 +25,8 @@ from scripts.postprocess.latent_space import WeightMatrixSelectionPage
 from scripts.process.adapt_dataframes import set_standard_order
 
 splitPath = os.getcwd().split('/')
-path = '/'.join(splitPath[:splitPath.index('antigen-encoding-pipeline')+1])+'/'
+path = '/'.join(splitPath[:splitPath.index('antigen-encoding-pipeline') + 1]) + '/'
+
 
 def fit_vt_vm(node1, node2, tol_r2=0.99):
     """Fit a straight line to the final time points of latent space.
@@ -55,7 +56,7 @@ def fit_vt_vm(node1, node2, tol_r2=0.99):
             if len(node1) < n_points:
                 return n_points
             else:
-                return check_uniqueness(n_points+1)
+                return check_uniqueness(n_points + 1)
 
         else:
             return n_points
@@ -66,7 +67,7 @@ def fit_vt_vm(node1, node2, tol_r2=0.99):
     r2 = 1
 
     while (r2 > tol_r2) and (n_points < len(node1)):
-        slope,_,r2,_,_ = linregress(node1[-n_points:], node2[-n_points:])
+        slope, _, r2, _, _ = linregress(node1[-n_points:], node2[-n_points:])
         n_points += 1
 
     if ((n_points >= 5) and (np.abs(slope) > 1)):
@@ -74,7 +75,8 @@ def fit_vt_vm(node1, node2, tol_r2=0.99):
     else:
         return np.nan
 
-def compute_vt_vm(df,slope_type="median"):
+
+def compute_vt_vm(df, slope_type="median"):
     """ Compute vt/vm ratio.
     Fit all conditions separately and return the mean or median slope (whichever is better)
 
@@ -90,19 +92,19 @@ def compute_vt_vm(df,slope_type="median"):
     slopes = pd.DataFrame([], index=df.index.droplevel("Time").unique(), columns=["slope"])
     # Fit a straight line to as as many final points as possible (at least 5)
     for idx in slopes.index:
-        slopes.loc[idx] = fit_vt_vm(df.loc[idx,"Node 1"], df.loc[idx,"Node 2"])
+        slopes.loc[idx] = fit_vt_vm(df.loc[idx, "Node 1"], df.loc[idx, "Node 2"])
     # Return mean or median dropping conditions for which no slope could be reliably calculated (n_points <= 5)
     median_slope = slopes.dropna().median().values[0]
     mean_slope = slopes.dropna().mean().values[0]
-    print("\tMedian slope:\t",np.around(median_slope,2))
-    print("\tMean slope:\t",np.around(mean_slope,2))
+    print("\tMedian slope:\t", np.around(median_slope, 2))
+    print("\tMean slope:\t", np.around(mean_slope, 2))
 
     if slope_type == "median":
         return median_slope
     elif slope_type == "mean":
         return mean_slope
     else:
-        raise NotImplementedError("%s measure is not yet implemented"%slope_type)
+        raise NotImplementedError("%s measure is not yet implemented" % slope_type)
 
 
 def ballistic_v0(times, v0, t0, theta, vt):
@@ -125,8 +127,8 @@ def ballistic_v0(times, v0, t0, theta, vt):
 
     x = np.zeros(times.shape)
     y = np.zeros(times.shape)
-    vx = v0 * np.cos(theta-np.pi/2)
-    vy = v0 * np.sin(theta-np.pi/2)
+    vx = v0 * np.cos(theta - np.pi / 2)
+    vy = v0 * np.sin(theta - np.pi / 2)
 
     # Phase 1
     prop = (times <= t0)
@@ -134,16 +136,16 @@ def ballistic_v0(times, v0, t0, theta, vt):
     y[prop] = vy * times[prop]
 
     # Phase 2
-    r0 = [vx*t0,vy*t0]  # Position at the end of the propulsion phase
+    r0 = [vx * t0, vy * t0]  # Position at the end of the propulsion phase
     delta_t = times[~prop] - t0
 
-    x[~prop] = (vx + vm) * (1-np.exp(-2*delta_t))/2 - vm * delta_t + r0[0]
-    y[~prop] = (vy + vt) * (1-np.exp(-2*delta_t))/2 - vt * delta_t + r0[1]
+    x[~prop] = (vx + vm) * (1 - np.exp(-2 * delta_t)) / 2 - vm * delta_t + r0[0]
+    y[~prop] = (vy + vt) * (1 - np.exp(-2 * delta_t)) / 2 - vt * delta_t + r0[1]
 
     return np.array([x, y])
 
 
-def ballistic_F(times, F,  t0, theta, vt):
+def ballistic_F(times, F, t0, theta, vt):
     """Piecewise ballisfic function that computes node 1 and node 2 from given parameters.
     Phase 1 is constant force regime.
 
@@ -159,10 +161,10 @@ def ballistic_F(times, F,  t0, theta, vt):
             Our custom curve_fit_jac can deal with vector-valued functions.
     """
 
-    def phase1_position(F,t):
+    def phase1_position(F, t):
         return F * (t - 1 + np.exp(-t))
 
-    def phase1_velocity(F,t):
+    def phase1_velocity(F, t):
         return F * (1 - np.exp(-t))
 
     # Initialize some variables
@@ -170,25 +172,26 @@ def ballistic_F(times, F,  t0, theta, vt):
 
     x = np.zeros(times.shape)
     y = np.zeros(times.shape)
-    Fx = F * np.cos(theta-np.pi/2)# - vm
-    Fy = F * np.sin(theta-np.pi/2)# - vt
+    Fx = F * np.cos(theta - np.pi / 2)  # - vm
+    Fy = F * np.sin(theta - np.pi / 2)  # - vt
 
     # Phase 1
     prop = (times <= t0)
-    x[prop] = phase1_position(Fx,times[prop])
-    y[prop] = phase1_position(Fy,times[prop])
+    x[prop] = phase1_position(Fx, times[prop])
+    y[prop] = phase1_position(Fy, times[prop])
 
     # Position and velocity at end of phase 1
-    r0 = phase1_position(np.array([Fx,Fy]),t0)
-    v0 = phase1_velocity(np.array([Fx,Fy]),t0)
+    r0 = phase1_position(np.array([Fx, Fy]), t0)
+    v0 = phase1_velocity(np.array([Fx, Fy]), t0)
 
     # Phase 2
     delta_t = times[~prop] - t0
 
-    x[~prop] = (v0[0] + vm) * (1-np.exp(-delta_t)) - vm * delta_t + r0[0]
-    y[~prop] = (v0[1] + vt) * (1-np.exp(-delta_t)) - vt * delta_t + r0[1]
+    x[~prop] = (v0[0] + vm) * (1 - np.exp(-delta_t)) - vm * delta_t + r0[0]
+    y[~prop] = (v0[1] + vt) * (1 - np.exp(-delta_t)) - vt * delta_t + r0[1]
 
-    return np.array([x,y])
+    return np.array([x, y])
+
 
 ## Improved ballistic model with a sigmoid and fixed alpha.
 # Full  model for sigmoid concentration n1 and n2 given just above.
@@ -203,15 +206,16 @@ def sigmoid_conc_full(tau, params):
 
     # Common terms
     bound_exp = 1 - np.exp(-tau)
-    exp_beta = np.exp(gamma*(tau - t0)) + 1
+    exp_beta = np.exp(gamma * (tau - t0)) + 1
 
     # Node 1
-    r[0] = bound_exp * ((a1 + v1)/exp_beta - v1)
+    r[0] = bound_exp * ((a1 + v1) / exp_beta - v1)
 
     # Node 2
     r[1] = (a2 + v2) * np.power(bound_exp, 2) / exp_beta - bound_exp * v2
 
     return r
+
 
 # The integral I(\tau, \tau_0, \gamma) = \int \frac{- e^{-\tau}}{e^{\gamma(\tau - \tau_0)} + 1}
 # general and special gamma cases covered.
@@ -219,21 +223,24 @@ def sig_int(tau, tau_0, gamma):
     """ Integral of -e^{-\tau} / (1 + e^{\gamma(\tau - \tau_0)})
     """
     # Verification: is gamma a special case where the hypergeometric function fails?
-    if abs(int(1/gamma) - 1/gamma) < 1e-12 and abs(int(1/gamma)) > 0.01:  # Not the 1/gamma = 0 case.
-        print("We hit the special case 1/gamma = {}".format(1/gamma))
-        n = int(1/gamma)
+    if abs(int(1 / gamma) - 1 / gamma) < 1e-12 and abs(
+            int(1 / gamma)) > 0.01:  # Not the 1/gamma = 0 case.
+        print("We hit the special case 1/gamma = {}".format(1 / gamma))
+        n = int(1 / gamma)
         res = np.exp(-tau)
-        res += (-1)**n * n * np.exp(-tau_0) * np.log(np.exp(-gamma * tau) + np.exp(-gamma * tau_0))
+        res += (-1) ** n * n * np.exp(-tau_0) * np.log(
+            np.exp(-gamma * tau) + np.exp(-gamma * tau_0))
         # Simpler to code a Python loop than to create a 2d array with one row per term in the sum...
         # If performance really becomes an issue, create arrays. But will probably never use this.
         for j in range(1, n):  # from 1 to n-1 included
-            res += (-1)**j * n / (n-j) * np.exp(-j * tau_0 / n) * np.exp((j/n - 1) * tau)
+            res += (-1) ** j * n / (n - j) * np.exp(-j * tau_0 / n) * np.exp((j / n - 1) * tau)
 
     # Otherwise, can rely on 2F1
     else:
-        res = np.exp(-tau) * hyp2f1(1, -1/gamma, 1 - 1/gamma, -np.exp(gamma*(tau - tau_0)))
+        res = np.exp(-tau) * hyp2f1(1, -1 / gamma, 1 - 1 / gamma, -np.exp(gamma * (tau - tau_0)))
 
     return res
+
 
 # The main function computing [N_1, N_2]
 def ballistic_sigmoid(tau, a0, t0, theta, v1, gamma):
@@ -257,21 +264,22 @@ def ballistic_sigmoid(tau, a0, t0, theta, v1, gamma):
     v2 = v1 * vt_vm_ratio  # vt is v2 (y direction), vm is v1 (x direction)
 
     # Some terms used in both node 1 and 2
-    lnterm_0 = np.log(1 + np.exp(-gamma*t0)) / gamma
-    lnterm = np.log(np.exp(-gamma*tau) + np.exp(-gamma*t0)) / gamma
+    lnterm_0 = np.log(1 + np.exp(-gamma * t0)) / gamma
+    lnterm = np.log(np.exp(-gamma * tau) + np.exp(-gamma * t0)) / gamma
     boundedint = tau + np.exp(-tau)
     siginterm = sig_int(tau, t0, gamma)
 
     # Constants to ensure it's zero at the origin
     k1 = v1 - (a1 + v1) * (sig_int(0, t0, gamma) - lnterm_0)
-    k2 = v2 + (a2 + v2) * (sig_int(0, 2*t0, gamma/2)/2 - 2*sig_int(0, t0, gamma) + lnterm_0)
+    k2 = v2 + (a2 + v2) * (sig_int(0, 2 * t0, gamma / 2) / 2 - 2 * sig_int(0, t0, gamma) + lnterm_0)
 
     # Assemble terms
     N1 = (a1 + v1) * (siginterm - lnterm) - v1 * boundedint + k1
-    N2 = (a2 + v2) * (2*siginterm - sig_int(2*tau, 2*t0, gamma/2)/2 - lnterm)
+    N2 = (a2 + v2) * (2 * siginterm - sig_int(2 * tau, 2 * t0, gamma / 2) / 2 - lnterm)
     N2 += -v2 * boundedint + k2
 
     return np.array([N1, N2])
+
 
 ## Improved ballistic model with a sigmoid and free alpha (more parameters)
 ## TODO!
@@ -280,14 +288,14 @@ def ballistic_sigmoid(tau, a0, t0, theta, v1, gamma):
 ### FUNCTIONS PERFORMING THE FIT FOR EACH TIME COURSE
 # Find the best fit for each time course in the DataFrame.
 def return_fit_params(df, func, bounds, p0, param_labels, time_scale=20,
-                        reg_rate=None, offsets=None, func_kwargs={}):
+                      reg_rate=None, offsets=None, func_kwargs={}):
     # Initialize a dataframe that will record parameters and parameter variances fitted to each curve.
     var_param_labels = ["var" + param for param in param_labels]
-    cols = param_labels+var_param_labels
+    cols = param_labels + var_param_labels
     nparams = len(param_labels)
 
     df_hess = pd.DataFrame([], index=df.index.droplevel("Time").unique(),
-            columns=pd.MultiIndex.from_product([param_labels, param_labels]))
+                           columns=pd.MultiIndex.from_product([param_labels, param_labels]))
     df_params = pd.DataFrame([], index=df.index.droplevel("Time").unique(), columns=cols)
 
     for idx in df_params.index:
@@ -295,7 +303,8 @@ def return_fit_params(df, func, bounds, p0, param_labels, time_scale=20,
         # it is included as a curve_fit parameter and automatically taken care of.
         # So it's easier to define a new function, returning vector values at each xdata
         ydata = df.loc[idx, :].values.T  # each row is one node
-        xdata = np.asarray(df.loc[idx].iloc[:, 0].index.get_level_values("Time").astype("float"))/time_scale
+        xdata = np.asarray(
+            df.loc[idx].iloc[:, 0].index.get_level_values("Time").astype("float")) / time_scale
         # Important to 1) slice only 72 time points with .loc[idx] first, and
         # 2) convert to a numpy array to avoid significant performance bottleneck
         # caused by dataframes.
@@ -306,8 +315,9 @@ def return_fit_params(df, func, bounds, p0, param_labels, time_scale=20,
         # Each row contains one node, each column is one time point. Required by curve_fit
         try:
             popt, pcov, jac = curve_fit_jac(func, xdata=xdata, ydata=ydata,
-                              absolute_sigma=True, bounds=bounds, p0=p0, reg_rate=reg_rate,
-                              offsets=offsets, func_kwargs=func_kwargs)
+                                            absolute_sigma=True, bounds=bounds, p0=p0,
+                                            reg_rate=reg_rate,
+                                            offsets=offsets, func_kwargs=func_kwargs)
         except RuntimeError as e:
             print("Could not fit {}".format(idx))
             popt, pcov = np.full([nparams], np.nan), np.full([nparams, nparams], np.nan)
@@ -341,24 +351,24 @@ def combine_spline_df_with_fit(df, df_fit):
     """
 
     # Add Processing type index level
-    df["Processing type"]="Splines"
-    df_fit["Processing type"]="Fit"
+    df["Processing type"] = "Splines"
+    df_fit["Processing type"] = "Fit"
 
     # Combine dataframes
-    df_compare=pd.concat([df,df_fit])
-    df_compare.set_index("Processing type",inplace=True,append=True)
+    df_compare = pd.concat([df, df_fit])
+    df_compare.set_index("Processing type", inplace=True, append=True)
 
     # Compute derivatives of df_compare data and return dataframe to same format
-    tmp=df_compare[["Node 1","Node 2"]].stack().unstack("Time")
-    tmp[0]=0
-    tmp=tmp.sort_index(axis=1).astype("float").diff(axis=1).dropna(axis=1).unstack().stack("Time")
-    tmp.columns = pd.MultiIndex.from_product([ ['concentration'], tmp.columns])
-    tmp=tmp.swaplevel("Processing type","Time")
+    tmp = df_compare[["Node 1", "Node 2"]].stack().unstack("Time")
+    tmp[0] = 0
+    tmp = tmp.sort_index(axis=1).astype("float").diff(axis=1).dropna(axis=1).unstack().stack("Time")
+    tmp.columns = pd.MultiIndex.from_product([['concentration'], tmp.columns])
+    tmp = tmp.swaplevel("Processing type", "Time")
 
     # Add feature as column level, combine integral and derivatives, stack dataframe and rename feature index level
-    df_compare.columns = pd.MultiIndex.from_product([ ['integral'], df_compare.columns])
-    df_compare=pd.concat([df_compare,tmp],axis=1).stack(0)
-    df_compare.index.names=df_compare.index.names[:-1]+["Feature"]
+    df_compare.columns = pd.MultiIndex.from_product([['integral'], df_compare.columns])
+    df_compare = pd.concat([df_compare, tmp], axis=1).stack(0)
+    df_compare.index.names = df_compare.index.names[:-1] + ["Feature"]
 
     return df_compare
 
@@ -384,28 +394,28 @@ def return_param_and_fitted_latentspace_dfs(df, fittingFunctionName, reg_rate=1.
 
     # TODO: add a separate option for free alpha.
     param_labels_dict = {
-        'Constant velocity':["v0", "t0", "theta", "vt"],
-        'Constant force':["F", "t0", "theta", "vt"],
-        'Sigmoid':["a0", "t0", "theta", "v1", "gamma"]
+        'Constant velocity': ["v0", "t0", "theta", "vt"],
+        'Constant force': ["F", "t0", "theta", "vt"],
+        'Sigmoid': ["a0", "t0", "theta", "v1", "gamma"]
     }
-    func_dict = {'Constant velocity':ballistic_v0,
+    func_dict = {'Constant velocity': ballistic_v0,
                  'Constant force': ballistic_F,
-                 'Sigmoid':ballistic_sigmoid}
+                 'Sigmoid': ballistic_sigmoid}
     bounds_dict = {
-        'Constant velocity':[(0, 0, 0, 0), (5, 5, np.pi, 5)],
+        'Constant velocity': [(0, 0, 0, 0), (5, 5, np.pi, 5)],
         'Constant force': [(0, 0, 0, 0), (5, 5, np.pi, 5)],
-        'Sigmoid':[(0, 0, -2*np.pi/3, 0, time_scale/50),
-                    (5, (duration + 20)/time_scale, np.pi/3, 1, time_scale/2)]
-        }
+        'Sigmoid': [(0, 0, -2 * np.pi / 3, 0, time_scale / 50),
+                    (5, (duration + 20) / time_scale, np.pi / 3, 1, time_scale / 2)]
+    }
     p0_dict = {
-        'Constant velocity':[1, 1, 1, 1],
-        'Constant force':[1, 1, 1, 1],
-        'Sigmoid':[1, 30 / time_scale, 0, 0.1, 1/7 * time_scale]
+        'Constant velocity': [1, 1, 1, 1],
+        'Constant force': [1, 1, 1, 1],
+        'Sigmoid': [1, 30 / time_scale, 0, 0.1, 1 / 7 * time_scale]
     }
     param_offsets_dict = {
         'Constant velocity': np.zeros(4),
         'Constant force': np.zeros(4),
-        'Sigmoid': np.array([0, 0, -np.pi/2, 0, 1])
+        'Sigmoid': np.array([0, 0, -np.pi / 2, 0, 1])
     }
 
     # Fit curves
@@ -417,7 +427,6 @@ def return_param_and_fitted_latentspace_dfs(df, fittingFunctionName, reg_rate=1.
         param_offsets = None  # Avoid a warning in curve_fit_jac
     else:
         param_offsets = param_offsets_dict[fittingFunctionName]
-
 
     datasetParamList = []
     datasetFitList = []
@@ -434,8 +443,9 @@ def return_param_and_fitted_latentspace_dfs(df, fittingFunctionName, reg_rate=1.
         # Compute latent space coordinates from parameters fits
         dataset_df_fit = datasetDf.copy()
         for idx in dataset_df_params.index:
-            fittingVars = dataset_df_params.loc[idx,param_labels]
-            times = dataset_df_fit.loc[idx,:].index.get_level_values("Time").astype("float")/time_scale
+            fittingVars = dataset_df_params.loc[idx, param_labels]
+            times = dataset_df_fit.loc[idx, :].index.get_level_values("Time").astype(
+                "float") / time_scale
             if not np.isnan(fittingVars.iloc[0]):
                 dataset_df_fit.loc[idx, :] = func(times, *fittingVars).T
             else:
@@ -445,14 +455,15 @@ def return_param_and_fitted_latentspace_dfs(df, fittingFunctionName, reg_rate=1.
         datasetFitList.append(dataset_df_fit)
         datasetHessList.append(dataset_df_hess)
 
-    df_params = pd.concat(datasetParamList, keys=datasets,names=['Data'])
-    df_fit = pd.concat(datasetFitList, keys=datasets,names=['Data'])
+    df_params = pd.concat(datasetParamList, keys=datasets, names=['Data'])
+    df_fit = pd.concat(datasetFitList, keys=datasets, names=['Data'])
     df_hess = pd.concat(datasetHessList, keys=datasets, names=['Data'])
 
     # Compare fit vs splines
     df_compare = combine_spline_df_with_fit(df, df_fit)
 
     return df_params, df_compare, df_hess
+
 
 ### CODE FOR THE GUI
 # TODO: bind the Sigmoid model to the GUI as well:
@@ -469,7 +480,7 @@ class FittingFunctionSelectionPage(tk.Frame):
 
         mainWindow = tk.Frame(self)
         l1 = tk.Label(mainWindow, text="Select function to fit latent space with:",
-            font='Helvetica 18 bold')
+                      font='Helvetica 18 bold')
         l1.grid(row=0, column=0, sticky=tk.W)
         mainWindow.pack(side=tk.TOP, padx=10, pady=10)
 
@@ -478,26 +489,27 @@ class FittingFunctionSelectionPage(tk.Frame):
         rblist = []
         for i, function in enumerate(functionList):
             rb = tk.Radiobutton(mainWindow, text=function, padx=20,
-                variable=functionVar, value=function)
-            rb.grid(row=i+1, column=0, sticky=tk.W)
+                                variable=functionVar, value=function)
+            rb.grid(row=i + 1, column=0, sticky=tk.W)
             rblist.append(rb)
 
         # Regularization rate as an input. Entry box.
         regrate_memory = tk.StringVar(value="1.")  # Default value, can be converted to float
         l2 = tk.Label(mainWindow,
-            text="Enter a regularization rate (positive float):",
-            font="Helvetica 18 bold")
-        l2.grid(row=len(functionList)+1, column=0, sticky=tk.W)
+                      text="Enter a regularization rate (positive float):",
+                      font="Helvetica 18 bold")
+        l2.grid(row=len(functionList) + 1, column=0, sticky=tk.W)
 
         # Add a label explaining how to remove focus to validate the value
         l3Var = tk.StringVar(value="Enter a non-negative float")
         l3 = tk.Label(mainWindow, textvariable=l3Var,
-            font="Helvetica 12").grid(row=len(functionList)+3,
-                column=0, sticky=tk.W)
+                      font="Helvetica 12").grid(row=len(functionList) + 3,
+                                                column=0, sticky=tk.W)
 
         # Float input validation
         def validate_float(st):
-            try: f = float(st)
+            try:
+                f = float(st)
             except ValueError:
                 check = False
             else:
@@ -536,12 +548,12 @@ class FittingFunctionSelectionPage(tk.Frame):
 
         # Now create the Entry with its validation commands
         regrateEntry = tk.Entry(mainWindow, bg="white",
-            exportselection=0,
-            width=6, # allow 0. to 1., 1.2e-5, etc.
-            validate="focus", # Validate after the user has finished typing
-            validatecommand=validate_cmd)
-            # To validate, output the proposed new text to the validate_float function)
-        regrateEntry.grid(row=len(functionList)+2, column=0, sticky=tk.W)
+                                exportselection=0,
+                                width=6,  # allow 0. to 1., 1.2e-5, etc.
+                                validate="focus",  # Validate after the user has finished typing
+                                validatecommand=validate_cmd)
+        # To validate, output the proposed new text to the validate_float function)
+        regrateEntry.grid(row=len(functionList) + 2, column=0, sticky=tk.W)
         regrateEntry.insert(0, regrate_memory.get())
 
         def collectInputs():
@@ -560,40 +572,54 @@ class FittingFunctionSelectionPage(tk.Frame):
             global df_params_plot, df_compare_plot
             # This is the only place where return_param_... is used.
             df_params_plot, df_compare_plot, df_hess_plot = \
-                return_param_and_fitted_latentspace_dfs(dfToParameterize, functionName, reg_rate=regrate)
+                return_param_and_fitted_latentspace_dfs(dfToParameterize, functionName,
+                                                        reg_rate=regrate)
             # TODO: use df_hess_plot for a Fisher info. analysis of the fit.
 
             df_params_columns = list(df_params_plot.columns)
             df_compare_columns = list(df_compare_plot.columns)
 
-            #Sort dataframes
+            # Sort dataframes
             sorted_df_params_plot = set_standard_order(df_params_plot.reset_index())
-            df_params_plot = pd.DataFrame(sorted_df_params_plot.loc[:,df_params_columns].values,
-                index=pd.MultiIndex.from_frame(sorted_df_params_plot.iloc[:,:-1*len(df_params_columns)]))
+            df_params_plot = pd.DataFrame(sorted_df_params_plot.loc[:, df_params_columns].values,
+                                          index=pd.MultiIndex.from_frame(
+                                              sorted_df_params_plot.iloc[:,
+                                              :-1 * len(df_params_columns)]))
             df_params_plot.columns = df_params_columns
 
             sorted_df_compare_plot = set_standard_order(df_compare_plot.reset_index())
-            df_compare_plot = pd.DataFrame(sorted_df_compare_plot.loc[:,df_compare_columns].values,
-                index=pd.MultiIndex.from_frame(sorted_df_compare_plot.iloc[:,:-1*len(df_compare_columns)]))
+            df_compare_plot = pd.DataFrame(sorted_df_compare_plot.loc[:, df_compare_columns].values,
+                                           index=pd.MultiIndex.from_frame(
+                                               sorted_df_compare_plot.iloc[:,
+                                               :-1 * len(df_compare_columns)]))
             df_compare_plot.columns = df_compare_columns
 
             print(df_compare_plot)
             print(df_params_plot)
 
-            #Save dataframes:
-            projectionName = pickle.load(open(path+'scripts/gui/plotting/projectionName.pkl','rb'))
-            with open(path+'output/parameter-dataframes/params-'+projectionName+'-'+functionName+'.pkl','wb') as f:
-                pickle.dump(df_params_plot,f)
-            with open(path+'output/parameter-space-dataframes/paramSpace-'+projectionName+'-'+functionName+'.pkl','wb') as f:
-                pickle.dump(df_compare_plot,f)
+            # Save dataframes:
+            projectionName = pickle.load(
+                open(path + 'scripts/gui/plotting/projectionName.pkl', 'rb'))
+            with open(
+                    path + 'output/parameter-dataframes/params-' + projectionName + '-' + functionName + '.pkl',
+                    'wb') as f:
+                pickle.dump(df_params_plot, f)
+            with open(
+                    path + 'output/parameter-space-dataframes/paramSpace-' + projectionName + '-' + functionName + '.pkl',
+                    'wb') as f:
+                pickle.dump(df_compare_plot, f)
 
             master.switch_frame(PlottingDataframeSelectionPage)
 
         buttonWindow = tk.Frame(self)
-        buttonWindow.pack(side=tk.TOP,pady=10)
-        tk.Button(buttonWindow, text="OK",command=lambda: collectInputs()).pack(in_=buttonWindow,side=tk.LEFT)
-        tk.Button(buttonWindow, text="Back",command=lambda: master.switch_frame(backPage)).pack(in_=buttonWindow,side=tk.LEFT)
-        tk.Button(buttonWindow, text="Quit",command=lambda: quit()).pack(in_=buttonWindow,side=tk.LEFT)
+        buttonWindow.pack(side=tk.TOP, pady=10)
+        tk.Button(buttonWindow, text="OK", command=lambda: collectInputs()).pack(in_=buttonWindow,
+                                                                                 side=tk.LEFT)
+        tk.Button(buttonWindow, text="Back", command=lambda: master.switch_frame(backPage)).pack(
+            in_=buttonWindow, side=tk.LEFT)
+        tk.Button(buttonWindow, text="Quit", command=lambda: quit()).pack(in_=buttonWindow,
+                                                                          side=tk.LEFT)
+
 
 class PlottingDataframeSelectionPage(tk.Frame):
     def __init__(self, master):
@@ -604,15 +630,15 @@ class PlottingDataframeSelectionPage(tk.Frame):
             mainWindow,
             text="Select type of parameterized dataframe to plot:",
             font='Helvetica 18 bold'
-            ).grid(row=0,column=0,sticky=tk.W)
-        mainWindow.pack(side=tk.TOP,padx=10,pady=10)
+        ).grid(row=0, column=0, sticky=tk.W)
+        mainWindow.pack(side=tk.TOP, padx=10, pady=10)
 
-        dfTypeList = ['parameters','parameterized latent space']
+        dfTypeList = ['parameters', 'parameterized latent space']
         dfTypeVar = tk.StringVar(value=dfTypeList[0])
         rblist = []
-        for i,dfType in enumerate(dfTypeList):
-            rb = tk.Radiobutton(mainWindow, text=dfType,padx = 20, variable=dfTypeVar,value=dfType)
-            rb.grid(row=i+1,column=0,sticky=tk.W)
+        for i, dfType in enumerate(dfTypeList):
+            rb = tk.Radiobutton(mainWindow, text=dfType, padx=20, variable=dfTypeVar, value=dfType)
+            rb.grid(row=i + 1, column=0, sticky=tk.W)
             rblist.append(rb)
 
         def collectInputs():
@@ -621,22 +647,25 @@ class PlottingDataframeSelectionPage(tk.Frame):
                 df_plot = df_params_plot.copy()
             else:
                 df_plot = df_compare_plot.copy()
-                df_plot = df_plot.swaplevel(i=-3,j=-2)
-                df_plot = df_plot.swaplevel(i=-2,j=-1)
+                df_plot = df_plot.swaplevel(i=-3, j=-2)
+                df_plot = df_plot.swaplevel(i=-2, j=-1)
                 df_plot_reset = df_plot.reset_index()
-                df_plot = pd.DataFrame(df_plot_reset.iloc[:,-3:].values,
-                    index=pd.MultiIndex.from_frame(df_plot_reset.iloc[:,:-3]),
-                    columns=list(df_plot_reset.columns)[-3:])
-                df_plot = df_plot[['Node 1','Node 2','Time']]
+                df_plot = pd.DataFrame(df_plot_reset.iloc[:, -3:].values,
+                                       index=pd.MultiIndex.from_frame(df_plot_reset.iloc[:, :-3]),
+                                       columns=list(df_plot_reset.columns)[-3:])
+                df_plot = df_plot[['Node 1', 'Node 2', 'Time']]
                 print(df_plot)
 
-            master.switch_frame(selectLevelsPage,df_plot,PlottingDataframeSelectionPage)
+            master.switch_frame(selectLevelsPage, df_plot, PlottingDataframeSelectionPage)
 
         buttonWindow = tk.Frame(self)
-        buttonWindow.pack(side=tk.TOP,pady=10)
-        tk.Button(buttonWindow, text="OK",command=lambda: collectInputs()).pack(in_=buttonWindow,side=tk.LEFT)
+        buttonWindow.pack(side=tk.TOP, pady=10)
+        tk.Button(buttonWindow, text="OK", command=lambda: collectInputs()).pack(in_=buttonWindow,
+                                                                                 side=tk.LEFT)
         tk.Button(
             buttonWindow, text="Back",
-            command=lambda: master.switch_frame(FittingFunctionSelectionPage,dfToParameterize,backPage)
-            ).pack(in_=buttonWindow,side=tk.LEFT)
-        tk.Button(buttonWindow, text="Quit",command=lambda: quit()).pack(in_=buttonWindow,side=tk.LEFT)
+            command=lambda: master.switch_frame(FittingFunctionSelectionPage, dfToParameterize,
+                                                backPage)
+        ).pack(in_=buttonWindow, side=tk.LEFT)
+        tk.Button(buttonWindow, text="Quit", command=lambda: quit()).pack(in_=buttonWindow,
+                                                                          side=tk.LEFT)

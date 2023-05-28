@@ -12,6 +12,7 @@ if sys_pf == 'darwin':
     matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import tkinter as tk
+import tkinter.messagebox
 import seaborn as sns
 sys.path.insert(0, 'scripts/process')
 import adapt_dataframes
@@ -50,13 +51,13 @@ class GUI_Start(tk.Tk):
         self._frame = new_frame
         self._frame.pack()
 
-#Top level actions for cytokine processing gui 
+#Top level actions for cytokine processing gui
 class ActionSelectionPage(tk.Frame):
     def __init__(self,master):
         tk.Frame.__init__(self, master)
         mainWindow = tk.Frame(self)
         mainWindow.pack(side=tk.TOP,padx=10)
-        
+
         l = tk.Label(mainWindow,text='Cytokine Processing GUI', font='Helvetica 18 bold')
         l.grid(row=0,column=0,columnspan=3)
         actionNames = ['Format raw dataframes','Create or plot splines','Create and plot trained neural networks','Plot mutant projections on trained network','Parameterize or plot latent spaces']
@@ -88,7 +89,7 @@ class ActionSelectionPage(tk.Frame):
             elif action == actionNames[4]:
                 with open('scripts/gui/plotting/plottingFolderName.pkl','wb') as f:
                     pickle.dump('parameterized-spaces',f)
-                latentSpaceBool = False 
+                latentSpaceBool = False
                 master.switch_frame(WeightMatrixSelectionPage,latentSpaceBool,FittingFunctionSelectionPage)
 
         buttonWindow = tk.Frame(self)
